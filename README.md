@@ -1,2 +1,65 @@
-# template
-空のgithubリポジトリ
+# sphylics - 匿名チャットアプリ
+
+完全匿名のチャットプラットフォーム。安全でプライベートなコミュニケーションを提供します。
+
+## 特徴
+
+- 🔒 完全匿名 - 個人情報不要
+- 🔐 エンドツーエンド暗号化
+- 📝 マークダウン対応
+- 🌓 ダークモード/ライトモード
+- 📱 完全レスポンシブ対応
+
+## 技術スタック
+
+- Vue.js 3
+- Vue Router 4
+- Vite
+- Tailwind CSS 3
+- Markdown-it
+- Material Design Icons
+
+## セットアップ
+
+```bash
+cd frontend
+npm install
+```
+
+## 開発サーバー起動
+
+```bash
+npm run dev
+```
+
+## ビルド
+
+```bash
+npm run build
+```
+
+## ページ一覧
+
+- `/` - トップページ
+- `/about` - About
+- `/policy` - プライバシーポリシー
+- `/faq` - FAQ
+- `/inquiry` - お問い合わせ
+- `/chat/:chatId` - チャットルーム
+- `/dashboard` - ダッシュボード
+- `/error` - エラーページ
+- `/newchat` - 新規チャット作成
+- `/newaccount` - アカウント作成
+- `/joinchat` - チャット参加
+- `/jobs` - 採用情報
+- `/terms` - 利用規約
+- `/stats` - 統計情報
+- `/devs` - API Docs
+- `/admin` - 管理者ページ
+- `/information` - お知らせ
+- `/newfunctionlab` - 新機能ラボ
+- `/search` - 検索
+
+## ライセンス
+
+MIT
