@@ -2,82 +2,38 @@
 
 ## システムアーキテクチャ図
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Client Application                       │
-│  (Web App, Mobile App, Desktop App, etc.)                       │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-                 │ 1. Authorization Request
-                 │    GET /oauth/authorize?client_id=...
-                 ↓
-┌─────────────────────────────────────────────────────────────────┐
-│              Cloudflare Workers (OAuth Business Logic)          │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │  Authorization Endpoint                                   │  │
-│  │  - PKCE検証                                               │  │
-│  │  - Client検証                                             │  │
-│  │  - Scope検証                                              │  │
-│  └───────────────────┬──────────────────────────────────────┘  │
-│                      │ 2. Redirect to Apps Script             │
-│                      │    with session_id                     │
-└──────────────────────┼────────────────────────────────────────┘
-                       │
-                       ↓
-┌─────────────────────────────────────────────────────────────────┐
-│          Google Apps Script (Identity Verification)             │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │  doGet(e)                                                 │  │
-│  │  - Session.getActiveUser().getEmail()                    │  │
-│  │  - authuser パラメータハンドリング                        │  │
-│  │  - メールアドレス取得                                      │  │
-│  └───────────────────┬──────────────────────────────────────┘  │
-│                      │ 3. Callback with email                 │
-│                      │    GET /oauth/callback?email=...       │
-└──────────────────────┼────────────────────────────────────────┘
-                       │
-                       ↓
-┌─────────────────────────────────────────────────────────────────┐
-│              Cloudflare Workers (OAuth Business Logic)          │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │  Callback Handler                                         │  │
-│  │  - Session検証                                            │  │
-│  │  - Authorization Code生成                                 │  │
-│  │  - KV保存 (10分間有効)                                    │  │
-│  └───────────────────┬──────────────────────────────────────┘  │
-│                      │ 4. Redirect with code                  │
-└──────────────────────┼────────────────────────────────────────┘
-                       │
-                       ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                         Client Application                       │
-│  5. Token Request                                               │
-│     POST /oauth/token                                           │
-│     grant_type=authorization_code                               │
-└────────────────┬────────────────────────────────────────────────┘
-                 │
-                 ↓
-┌─────────────────────────────────────────────────────────────────┐
-│              Cloudflare Workers (Token Endpoint)                │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │  - PKCE検証 (code_verifier)                              │  │
-│  │  - Authorization Code検証                                 │  │
-│  │  - JWT生成 (ES256署名)                                    │  │
-│  │  - Refresh Token生成                                      │  │
-│  └───────────────────┬──────────────────────────────────────┘  │
-│                      │ 6. Tokens Response                     │
-└──────────────────────┼────────────────────────────────────────┘
-                       │
-                       ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                         Client Application                       │
-│  - Access Token使用                                             │
-│  - UserInfo取得: GET /oauth/userinfo                            │
-└─────────────────────────────────────────────────────────────────┘
+```marmaid
+sequenceDiagram
+    participant Client as Client Application<br/>(Web / Mobile / Desktop)
+    participant WorkerAuth as Cloudflare Workers<br/>(Authorization Endpoint)
+    participant AppsScript as Google Apps Script<br/>(Identity Verification)
+    participant WorkerToken as Cloudflare Workers<br/>(Token Endpoint)
+
+    %% Step 1
+    Client->>WorkerAuth: 1. Authorization Request<br/>GET /oauth/authorize?client_id=...
+    note right of WorkerAuth: PKCE検証<br/>Client検証<br/>Scope検証
+
+    %% Step 2
+    WorkerAuth->>AppsScript: 2. Redirect to Apps Script<br/>with session_id
+
+    %% Step 3
+    AppsScript->>AppsScript: doGet(e)<br/>Session.getActiveUser().getEmail()<br/>authuserパラメータ処理
+    AppsScript->>WorkerAuth: 3. Callback with email<br/>GET /oauth/callback?email=...
+
+    %% Step 4
+    note right of WorkerAuth: Session検証<br/>Authorization Code生成<br/>KV保存 (10分間有効)
+    WorkerAuth->>Client: 4. Redirect with code
+
+    %% Step 5
+    Client->>WorkerToken: 5. Token Request<br/>POST /oauth/token<br/>grant_type=authorization_code
+    note right of WorkerToken: PKCE検証<br/>Authorization Code検証<br/>JWT生成 (ES256署名)<br/>Refresh Token生成
+
+    %% Step 6
+    WorkerToken->>Client: 6. Tokens Response
+
+    %% Step 7
+    Client->>WorkerToken: UserInfo取得<br/>GET /oauth/userinfo
+    note right of Client: Access Token使用
 ```
 
 ---
@@ -149,65 +105,34 @@
 
 ### Authorization Code Flow
 
-```
-┌──────┐                                          ┌─────────┐
-│Client│                                          │ Workers │
-└───┬──┘                                          └────┬────┘
-    │                                                  │
-    │ 1. GET /oauth/authorize                         │
-    │    + code_challenge (SHA256(verifier))          │
-    ├─────────────────────────────────────────────────>│
-    │                                                  │
-    │                    2. Session ID生成             │
-    │                       KV保存 (session:xxx)       │
-    │                                                  │
-    │ 3. 302 Redirect to Apps Script                  │
-    │<─────────────────────────────────────────────────┤
-    │                                                  │
-┌───┴───┐                                          ┌──────────────┐
-│Browser│                                          │Apps Script   │
-└───┬───┘                                          └──────┬───────┘
-    │                                                     │
-    │ 4. GET {apps_script_url}?session_id=xxx            │
-    ├─────────────────────────────────────────────────────>│
-    │                                                     │
-    │            5. Session.getActiveUser().getEmail()    │
-    │               メールアドレス取得                     │
-    │                                                     │
-    │ 6. 302 Redirect to /oauth/callback?email=...&session_id=xxx
-    │<─────────────────────────────────────────────────────┤
-    │                                                     │
-┌───┴───┐                                          ┌─────────┐
-│Browser│                                          │ Workers │
-└───┬───┘                                          └────┬────┘
-    │                                                  │
-    │ 7. GET /oauth/callback?email=...                 │
-    ├─────────────────────────────────────────────────>│
-    │                                                  │
-    │              8. Session検証 (KV: session:xxx)     │
-    │                 Authorization Code生成            │
-    │                 KV保存 (authcode:yyy)             │
-    │                                                  │
-    │ 9. 302 Redirect to {redirect_uri}?code=yyy       │
-    │<─────────────────────────────────────────────────┤
-    │                                                  │
-┌───┴──┐                                           ┌─────────┐
-│Client│                                           │ Workers │
-└───┬──┘                                           └────┬────┘
-    │                                                  │
-    │ 10. POST /oauth/token                            │
-    │     code=yyy, code_verifier=zzz                  │
-    ├─────────────────────────────────────────────────>│
-    │                                                  │
-    │           11. PKCE検証: SHA256(zzz) == stored    │
-    │               Code検証 (KV: authcode:yyy)        │
-    │               JWT生成 (ES256署名)                 │
-    │               Refresh Token生成                   │
-    │               KV保存 (refresh:aaa)                │
-    │                                                  │
-    │ 12. JSON: access_token, refresh_token, id_token  │
-    │<─────────────────────────────────────────────────┤
-    │                                                  │
+```marmaid
+sequenceDiagram
+    participant Client as Client
+    participant Workers as Cloudflare Workers
+    participant Browser as Browser
+    participant Apps as Google Apps Script
+
+    %% Step 1
+    Client->>Workers: 1. GET /oauth/authorize<br/>+ code_challenge (SHA256(verifier))
+    note right of Workers: 2. Session ID生成<br/>KV保存 (session:xxx)
+    Workers-->>Client: 3. 302 Redirect to Apps Script
+
+    %% Step 4
+    Client->>Browser: (Redirect follows)
+    Browser->>Apps: 4. GET {apps_script_url}?session_id=xxx
+    note right of Apps: 5. Session.getActiveUser().getEmail()<br/>メールアドレス取得
+    Apps-->>Browser: 6. 302 Redirect to /oauth/callback?<br/>email=...&session_id=xxx
+
+    %% Step 7
+    Browser->>Workers: 7. GET /oauth/callback?email=...
+    note right of Workers: 8. Session検証 (KV: session:xxx)<br/>Authorization Code生成<br/>KV保存 (authcode:yyy)
+    Workers-->>Browser: 9. 302 Redirect to {redirect_uri}?code=yyy
+
+    %% Step 10
+    Browser->>Client: (Redirect follows)
+    Client->>Workers: 10. POST /oauth/token<br/>code=yyy, code_verifier=zzz
+    note right of Workers: 11. PKCE検証: SHA256(zzz) == stored<br/>Code検証 (KV: authcode:yyy)<br/>JWT生成 (ES256署名)<br/>Refresh Token生成<br/>KV保存 (refresh:aaa)
+    Workers-->>Client: 12. JSON Response<br/>{ access_token, refresh_token, id_token }
 ```
 
 ---
