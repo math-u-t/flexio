@@ -216,6 +216,22 @@ const confirmLogout = () => {
 }
 
 onMounted(() => {
+  // Handle bbauth callback parameters
+  const urlParams = new URLSearchParams(window.location.search)
+  const serviceToken = urlParams.get('service_token')
+  const accountId = urlParams.get('account_id')
+
+  if (serviceToken && accountId) {
+    // Store bbauth service token and account ID
+    localStorage.setItem('flexio_service_token', serviceToken)
+    localStorage.setItem('flexio_account_id', accountId)
+
+    // Clean up URL parameters
+    window.history.replaceState({}, document.title, window.location.pathname)
+
+    console.log('bbauth authentication successful, account ID:', accountId)
+  }
+
   loadUserData()
 })
 </script>

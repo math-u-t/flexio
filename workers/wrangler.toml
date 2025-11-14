@@ -44,12 +44,24 @@ APPS_SCRIPT_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"
 # REQUIRED: Update with your frontend domain(s)
 ALLOWED_ORIGINS = "http://localhost:5173,https://your-domain.com"
 
+# External bbauth integration (OPTIONAL)
+BBAUTH_PROVIDER_URL = ""
+BBAUTH_CLIENT_ID = "flexio-client"
+BBAUTH_CLIENT_SECRET = ""
+BBAUTH_REDIRECT_URI = "http://localhost:8787/auth/bbauth/callback"
+BBAUTH_SCOPE = "email"
+
 # Production environment
 [env.production]
 vars = {
   ISSUER_URL = "https://your-domain.com",
   APPS_SCRIPT_URL = "https://script.google.com/macros/s/YOUR_PRODUCTION_SCRIPT_ID/exec",
-  ALLOWED_ORIGINS = "https://your-domain.com"
+  ALLOWED_ORIGINS = "https://your-domain.com",
+  BBAUTH_PROVIDER_URL = "",
+  BBAUTH_CLIENT_ID = "flexio-client",
+  BBAUTH_CLIENT_SECRET = "",
+  BBAUTH_REDIRECT_URI = "https://your-workers-subdomain.workers.dev/auth/bbauth/callback",
+  BBAUTH_SCOPE = "email"
 }
 
 # Development environment
@@ -57,15 +69,22 @@ vars = {
 vars = {
   ISSUER_URL = "http://localhost:8787",
   APPS_SCRIPT_URL = "https://script.google.com/macros/s/YOUR_DEV_SCRIPT_ID/exec",
-  ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:3000"
+  ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:3000",
+  BBAUTH_PROVIDER_URL = "",
+  BBAUTH_CLIENT_ID = "flexio-client",
+  BBAUTH_CLIENT_SECRET = "",
+  BBAUTH_REDIRECT_URI = "http://localhost:8787/auth/bbauth/callback",
+  BBAUTH_SCOPE = "email"
 }
 
 # Secrets (set with wrangler secret put)
 # - JWT_PRIVATE_KEY
 # - JWT_PUBLIC_KEY
 # - ADMIN_TOKEN
+# - BBAUTH_CLIENT_SECRET (if using external bbauth)
 
 # Usage:
 # wrangler secret put JWT_PRIVATE_KEY
 # wrangler secret put JWT_PUBLIC_KEY
 # wrangler secret put ADMIN_TOKEN
+# wrangler secret put BBAUTH_CLIENT_SECRET  # Optional, for external bbauth

@@ -11,6 +11,12 @@ export interface Env {
   ISSUER_URL: string;
   APPS_SCRIPT_URL: string;
   ALLOWED_ORIGINS: string;
+  // External bbauth OAuth provider integration
+  BBAUTH_PROVIDER_URL: string;
+  BBAUTH_CLIENT_ID: string;
+  BBAUTH_CLIENT_SECRET: string;
+  BBAUTH_REDIRECT_URI: string;
+  BBAUTH_SCOPE: string;
 }
 
 // OAuth 2.0 Client

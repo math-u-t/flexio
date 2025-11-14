@@ -54,34 +54,68 @@
           </div>
         </div>
 
-        <!-- Login Button -->
-        <button
-          @click="handleLogin"
-          :disabled="isLoading || !oauthConfigured"
-          class="w-full flex items-center justify-center px-6 py-4 text-lg font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300 dark:focus:ring-indigo-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
-        >
-          <svg
-            v-if="isLoading"
-            class="animate-spin -ml-1 mr-3 h-6 w-6 text-white"
-            fill="none"
-            viewBox="0 0 24 24"
+        <!-- Login Buttons -->
+        <div class="space-y-3">
+          <!-- Standard OAuth Login Button -->
+          <button
+            @click="handleLogin"
+            :disabled="isLoading || !oauthConfigured"
+            class="w-full flex items-center justify-center px-6 py-4 text-lg font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300 dark:focus:ring-indigo-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
           >
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
+            <svg
+              v-if="isLoading"
+              class="animate-spin -ml-1 mr-3 h-6 w-6 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
 
-          <svg
-            v-else
-            class="w-6 h-6 mr-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+            <svg
+              v-else
+              class="w-6 h-6 mr-3"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+            </svg>
+
+            {{ isLoading ? 'Signing in...' : 'Sign in with OAuth 2.0' }}
+          </button>
+
+          <!-- bbauth Login Button (conditional) -->
+          <button
+            v-if="bbauthEnabled"
+            @click="handleBbauthLogin"
+            :disabled="isLoading"
+            class="w-full flex items-center justify-center px-6 py-4 text-lg font-semibold text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-          </svg>
+            <svg
+              class="w-6 h-6 mr-3 text-indigo-600 dark:text-indigo-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
 
-          {{ isLoading ? 'Signing in...' : 'Sign in with OAuth 2.0' }}
-        </button>
+            Sign in with bbauth
+          </button>
+
+          <!-- Separator (only if bbauth is enabled) -->
+          <div v-if="bbauthEnabled" class="relative">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
+            </div>
+            <div class="relative flex justify-center text-sm">
+              <span class="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                or
+              </span>
+            </div>
+          </div>
+        </div>
 
         <!-- Security Info -->
         <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
@@ -136,15 +170,35 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { useAuth } from '../composables/useAuth';
 
 const { login, isLoading, error, clearError, oauthConfigured } = useAuth();
+
+// Check if bbauth integration is enabled
+const bbauthEnabled = computed(() => {
+  return import.meta.env.VITE_ENABLE_BBAUTH === 'true' &&
+         import.meta.env.VITE_BBAUTH_PROVIDER_URL;
+});
 
 async function handleLogin() {
   try {
     await login();
   } catch (err) {
     console.error('Login failed:', err);
+  }
+}
+
+async function handleBbauthLogin() {
+  try {
+    // Get the API base URL
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
+
+    // Redirect to bbauth login endpoint
+    const returnUrl = encodeURIComponent(window.location.origin + '/dashboard');
+    window.location.href = `${apiBaseUrl}/auth/bbauth/login?return_url=${returnUrl}`;
+  } catch (err) {
+    console.error('bbauth login failed:', err);
   }
 }
 </script>

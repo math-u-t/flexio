@@ -47,6 +47,13 @@ import {
   handleNotificationList,
   handleAdminLogs,
 } from './handlers/service';
+import {
+  handleBbauthLogin,
+  handleBbauthCallback,
+  handleBbauthLink,
+  handleBbauthUnlink,
+  handleBbauthStatus,
+} from './handlers/bbauth';
 import { rateLimitMiddleware } from './middleware/rateLimit';
 import { requireAdminToken } from './middleware/auth';
 
@@ -105,6 +112,21 @@ export default {
         response = await handleClientDelete(request, env, clientId);
       } else if (path === '/admin/provider/register' && method === 'POST') {
         response = await handleProviderRegister(request, env);
+
+      // ============================================================
+      // bbauth Integration Routes
+      // ============================================================
+
+      } else if (path === '/auth/bbauth/login' && method === 'GET') {
+        response = await handleBbauthLogin(request, env);
+      } else if (path === '/auth/bbauth/callback' && method === 'GET') {
+        response = await handleBbauthCallback(request, env);
+      } else if (path === '/auth/bbauth/link' && method === 'POST') {
+        response = await handleBbauthLink(request, env);
+      } else if (path === '/auth/bbauth/unlink' && method === 'POST') {
+        response = await handleBbauthUnlink(request, env);
+      } else if (path === '/auth/bbauth/status' && method === 'GET') {
+        response = await handleBbauthStatus(request, env);
 
       // ============================================================
       // Flexio API Routes
